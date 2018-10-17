@@ -187,11 +187,11 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $totalWeight = 0;
 
         if(isset($items)){
+            $all_weights = [];
             
             foreach($items as $item => $values) { 
             $_product =  wc_get_product( $values['data']->get_id()); 
             $price = get_post_meta($values['product_id'] , '_price', true);
-            $all_weights = [];
             $orderItems[] = array(
                 'title' => $_product->get_title(),
                 'quantity' => $values['quantity'],
@@ -482,13 +482,18 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $notice  = get_option( 'fst_submit_form_response', false );
         if($notice) {
             delete_option( 'fst_submit_form_response' );
-            display_notice( $notice );
+            display_error_notice( $notice );
         }
     }
     add_action( 'admin_notices', 'fst_custom_notice');         
 
-    function display_notice($notice) {
+    function display_error_notice($notice) {
         echo '<div class="notice notice-error is-dismissible">
+            <p>'.$notice.'</p>
+        </div>';
+    }
+    function display_success_notice($notice) {
+        echo '<div class="notice notice-success is-dismissible">
             <p>'.$notice.'</p>
         </div>';
     }
@@ -506,6 +511,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $last_name = ($customer->get_billing_last_name() !== '')? $customer->get_billing_last_name(): $_POST['billing_last_name'];
 
         $data=array();
+
           $data["sessionId"]= WC()->session->get('requestSessionId');
           $data["shippingClass"]= $_POST['fst_package'];
           $data["shippingParther"]= WC()->session->get('Shipper_shipperID');
@@ -520,20 +526,20 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 //          die();
       
           curl_setopt_array($curl, array(
-          CURLOPT_URL => API_URL . "/api/v1/shipping/submit",
-          CURLOPT_RETURNTRANSFER => true,
-          CURLOPT_ENCODING => "",
-          CURLOPT_MAXREDIRS => 10,
-          CURLOPT_TIMEOUT => 30,
-          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-          CURLOPT_CUSTOMREQUEST => "POST",
-          CURLOPT_POSTFIELDS => "sessionId=".$data["sessionId"]."&shippingClass=".$data["shippingClass"]."&shippingParther=".WC()->session->get("Shipper_shipperID")."&customerEmail=".$data["customerEmail"]."&customerName=".$data["customerName"]."&description=".$data["description"]."&customerAddress=".$data["customerAddress"]."&customerPhone=".$data["customerPhone"]."&itemList=".WC()->session->get('cartItems')."",
-          CURLOPT_HTTPHEADER => array(
-              "Auth-Token: ".get_api_key()."",
-              "Cache-Control: no-cache",
-              "Content-Type: application/x-www-form-urlencoded",
-              "Postman-Token: 168af565-cb4e-4351-958e-51e71a2b9919"
-          ),
+            CURLOPT_URL => API_URL . "/api/v1/shipping/submit",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => "sessionId=".$data["sessionId"]."&shippingClass=".$data["shippingClass"]."&shippingParther=".WC()->session->get("Shipper_shipperID")."&customerEmail=".$data["customerEmail"]."&customerName=".$data["customerName"]."&description=".$data["description"]."&customerAddress=".$data["customerAddress"]."&customerPhone=".$data["customerPhone"]."&itemList=".WC()->session->get('cartItems')."",
+            CURLOPT_HTTPHEADER => array(
+                "Auth-Token: ".get_api_key()."",
+                "Cache-Control: no-cache",
+                "Content-Type: application/x-www-form-urlencoded",
+                "Postman-Token: 168af565-cb4e-4351-958e-51e71a2b9919"
+            ),
           ));
           
           $response = curl_exec($curl);
@@ -554,6 +560,69 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
       
     add_action('woocommerce_order_status_on-hold','woocommerce_order_complete_post_variable');
 
+
+    function fst_check_noweight_products() {
+        $args = [
+            'post_type' => 'product'
+        ];
+        $products = query_posts($args);
+        $_products = [];
+        foreach($products as $product) {
+            $productDetails = wc_get_product( $product->ID );
+            if(!$productDetails->get_weight()) {
+                $_products[] = $product->ID;
+            }
+        }
+        return $_products;
+    }
+    
+    function fst_display_noweights_error(){
+
+        $items = fst_check_noweight_products();
+
+        if($items) {
+            display_error_notice( "<h3>Funnel Shipping Notice!</h3><strong>Notice: You have <a href='".admin_url('?page=fst-weightcheck')."'>".count($items)." products</a> with no weight set. A default weight would be used for your shipping calculation instead.</strong>");
+        }
+    }
+    add_action( 'admin_notices', 'fst_display_noweights_error');     
     
 
+
+    function weight_errors_display_page(){
+        ?>
+        <div class="wrap">
+            <h1><?php _e( 'Funnel for Woocommerce: Weight Checker', 'fst-shipping-api' ); ?></h1>
+        <?php
+            include 'inc/ProductsList.class.inc.php';
+            $_table_list = new Products_List_Table();
+            $_table_list->prepare_items();
+            echo '<input type="hidden" name="post" value="" />';
+            echo '<input type="hidden" name="section" value="products" />';
+            
+            $_table_list->views();
+            $_table_list->search_box( __( 'Search Key', 'fst-shipping-api' ), 'key' );
+            $_table_list->display();
+
+                // $items = fst_check_noweight_products();
+
+                // if(!$items) {
+                //     display_success_notice('Congratulations! All your products\' weights are properly defined.');
+                // } else {
+                //     echo '<p>Please fix the products listed below. Their weights are not defined yet for shipping.</p>';
+                //     echo '<ul>';
+                //     foreach($items as $item) {
+                //         $productDetails = wc_get_product( $item );
+                //         echo '<li>'.$productDetails->name.'</li>';
+                //     }
+                //     echo '</ul>';
+                // }
+        ?>
+        </div>
+        <?php
+    }
+
+    function fst_add_errorspage_to_menu() {
+        add_submenu_page(NULL,'Page Title','Page Title', 'manage_options', 'fst-weightcheck', 'weight_errors_display_page');
+    }        
+    add_action( 'admin_menu', 'fst_add_errorspage_to_menu' );
 }
