@@ -3,11 +3,11 @@
 defined('ABSPATH') or die('do not die please');
 /*
 * @wordpress-plugin
-* Plugin Name:       Funnel for Woocommerce
-* Plugin URI:        funnel.ng
-* Description:       Bring the power of the funnel API to your WooCommerce merchant website and enjoy unlimited logistics possibilities
+* Plugin Name:       Nipost for Woocommerce
+* Plugin URI:        Shipping.nipost.gov.ng
+* Description:       Bring the power of the Nipost API to your WooCommerce merchant website and enjoy unlimited logistics possibilities
 * Version:           1.0.2
-* Author:            Funnel Shipping Technologies
+* Author:            Funnel Logistics Technologies
 * Author URI:        funnel.ng
 * License:           GPL-2.0+
 * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
@@ -16,6 +16,8 @@ defined('ABSPATH') or die('do not die please');
 */
 
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+
+    include 'inc/Weightless.class.inc.php';
 
     define('API_URL', 'http://shippingapps.test');
 
@@ -55,6 +57,11 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function get_api_key() {
         $shipping_methods = WC()->shipping->load_shipping_methods();
         return $shipping_methods['fst-shipping-method']->settings['api_key'];
+    }
+
+    function get_excluded_categories() {
+        $shipping_methods = WC()->shipping->load_shipping_methods();
+        return $shipping_methods['fst-shipping-method']->settings['excluded_categories'];
     }
 
     function process_shipping_classes() {
@@ -188,21 +195,39 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
         if(isset($items)){
             $all_weights = [];
+            $excluded_categories = explode(', ', get_excluded_categories());
             
             foreach($items as $item => $values) { 
             $_product =  wc_get_product( $values['data']->get_id()); 
-            $price = get_post_meta($values['product_id'] , '_price', true);
-            $orderItems[] = array(
-                'title' => $_product->get_title(),
-                'quantity' => $values['quantity'],
-                'price' => get_post_meta($values['product_id'] , '_price', true),
-                'weight' => $_product->get_weight()
-            );
+
+            //Check if Item is in excluded list. 
+            if(array_count_values($excluded_categories) > 0) {
+                
+                    $_existing = false;
+
+                    foreach($_product->category_ids as $category) {
+                        if(in_array($category, $excluded_categories)) {
+                            $_existing = true;
+                            continue;
+                        }
+                    }
+                    
+                    if($_existing) continue;
+            }
+
+                $price = get_post_meta($values['product_id'] , '_price', true);
+                $orderItems[] = array(
+                    'title' => $_product->get_title(),
+                    'quantity' => $values['quantity'],
+                    'price' => get_post_meta($values['product_id'] , '_price', true),
+                    'weight' => $_product->get_weight()
+                );
                 $all_weights[] = ['weight' => $_product->get_weight(), 'quantity' => $values['quantity']];
                 $count++;
             }
         } 
-    
+        
+//        var_dump($orderItems);
         $cartInfo['items'] = $orderItems;
         $cartInfo['count'] = $count;
         $cartInfo['totalWeight'] = $itemWeight;
@@ -269,9 +294,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 
                     } else {
                      //   print_r($_fst_orders);
-						print_r($response);
-                        $data = json_decode($response,true);
-                        
+//						print_r($response);
+                        $data = json_decode($response,true);	
+				//	print_r($data['requestSessionId']);                        
                         WC()->session->set('requestSessionId', $data['requestSessionId']);
                 
                         if($data["data"]) {
@@ -512,19 +537,29 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
         $data=array();
 
+        $state = WC()->countries->get_states($customer->get_shipping_country())[$customer->get_shipping_state()];
+
           $data["sessionId"]= WC()->session->get('requestSessionId');
           $data["shippingClass"]= $_POST['fst_package'];
           $data["shippingParther"]= WC()->session->get('Shipper_shipperID');
           $data["customerEmail"]= ($customer->get_billing_email() !== '')? $customer->get_billing_email() : $_POST['billing_email'];
           $data["customerName"]= $first_name." ".$last_name;
           $data["description"]= "transaction";
-          $data["customerAddress"]= $customer->get_billing_address();
+          $data["customerAddress"]= $customer->get_billing_address().', '.$customer->get_billing_city().', '.$state;
           $data["customerPhone"]= ($customer->get_billing_phone() !== '')? $customer->get_billing_phone(): $_POST['billing_phone'];
           $curl = curl_init();
 
 //          print_r($data);
 //          die();
-      
+
+
+            $cod = '';
+            $cod_price = WC()->cart->subtotal;
+
+            if(WC()->session->get('chosen_payment_method') == 'cod') {
+                $cod = '&cod=1&cod_price='.$cod_price;
+            }
+
           curl_setopt_array($curl, array(
             CURLOPT_URL => API_URL . "/api/v1/shipping/submit",
             CURLOPT_RETURNTRANSFER => true,
@@ -533,7 +568,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             CURLOPT_TIMEOUT => 30,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => "sessionId=".$data["sessionId"]."&shippingClass=".$data["shippingClass"]."&shippingParther=".WC()->session->get("Shipper_shipperID")."&customerEmail=".$data["customerEmail"]."&customerName=".$data["customerName"]."&description=".$data["description"]."&customerAddress=".$data["customerAddress"]."&customerPhone=".$data["customerPhone"]."&itemList=".WC()->session->get('cartItems')."",
+            CURLOPT_POSTFIELDS => "sessionId=".$data["sessionId"]."&shippingClass=".$data["shippingClass"]."&shippingParther=".WC()->session->get("Shipper_shipperID")."&customerEmail=".$data["customerEmail"]."&customerName=".$data["customerName"]."&description=".$data["description"]."&customerAddress=".$data["customerAddress"]."&customerPhone=".$data["customerPhone"]."&itemList=".WC()->session->get('cartItems')."".$cod,
             CURLOPT_HTTPHEADER => array(
                 "Auth-Token: ".get_api_key()."",
                 "Cache-Control: no-cache",
@@ -551,14 +586,13 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
   //          echo "cURL Error #:" . $err;
           } else {
           
-            print_r($response);
-            die();
+//            print_r($response);
           }
           
         
       }
       
-    add_action('woocommerce_order_status_on-hold','woocommerce_order_complete_post_variable');
+    add_action('woocommerce_after_checkout_validation','woocommerce_order_complete_post_variable');
 
 
     function fst_check_noweight_products() {
@@ -578,10 +612,11 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     
     function fst_display_noweights_error(){
 
-        $items = fst_check_noweight_products();
+        $products = new Weightless_List_Table();
+        $count = $products->get_count();
 
-        if($items) {
-            display_error_notice( "<h3>Funnel Shipping Notice!</h3><strong>Notice: You have <a href='".admin_url('?page=fst-weightcheck')."'>".count($items)." products</a> with no weight set. A default weight would be used for your shipping calculation instead.</strong>");
+        if($count > 0) {
+            display_error_notice( "<h3>Nipost Shipping Notice!</h3><strong>Notice: You have <a href='".admin_url('?page=fst-weightcheck')."'>".$count." product(s)</a> with no weight set. A default weight would be used for your shipping calculation instead.</strong>");
         }
     }
     add_action( 'admin_notices', 'fst_display_noweights_error');     
@@ -591,10 +626,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function weight_errors_display_page(){
         ?>
         <div class="wrap">
-            <h1><?php _e( 'Funnel for Woocommerce: Weight Checker', 'fst-shipping-api' ); ?></h1>
+            <h1><?php _e( 'Nipost for Woocommerce: Weight Checker', 'fst-shipping-api' ); ?></h1>
         <?php
-            include 'inc/ProductsList.class.inc.php';
-            $_table_list = new Products_List_Table();
+            $_table_list = new Weightless_List_Table();
             $_table_list->prepare_items();
             echo '<input type="hidden" name="post" value="" />';
             echo '<input type="hidden" name="section" value="products" />';

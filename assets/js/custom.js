@@ -1,10 +1,11 @@
 jQuery(document).ready(function(){
- 
-    //Get shipping cost from API
-    jQuery("input[name='billing_city'], select[name='billing_state']").change(function(){
-        var val = jQuery(this).val();
-        var field = jQuery(this).attr('name');
+  
+    var loadData = (el) => {
+        var val = jQuery(el.target).val(); //jQuery(this).val();
+        var field = jQuery(el.target).attr('name');
         var data = {'action': 'fst_shipping_classes'};
+
+//        console.log(jQuery(el.target).val());
 
         if(field == 'billing_state') {
             data.state =  val;
@@ -15,14 +16,23 @@ jQuery(document).ready(function(){
             data.city =  val;
         }
 
-       // console.log(data);
         jQuery('#fst_plugin_data').html("Fetching data...");
         update_checkout();
  
         jQuery.post(ajax_object.ajax_url, data, function(response) {
             jQuery('#fst_plugin_data').html(response);
         });
-    });
+    }
+    
+    //Get shipping cost from API
+        if(jQuery("input[name='billing_city']").length > 0) {
+            loadData(jQuery("input[name='billing_city']"));
+        }
+        if(jQuery("input[name='billing_state']").length > 0) {
+            loadData(jQuery("input[name='billing_state']"));
+        }
+    
+    jQuery("input[name='billing_city'], select[name='billing_state']").change(loadData);
 
 
     jQuery('#fst_plugin_data').on('change', '.fst_package', function() {
@@ -53,7 +63,6 @@ jQuery(document).ready(function(){
 
     jQuery( document.body ).on( 'checkout_error', function() {
         var error_text = jQuery('.woocommerce-error').find('li').first().text();
-//        console.log(error_text);
         if ( error_text=='Please select a shipping method' ) {
             jQuery('#fst_plugin_data').css('border-left', '3px solid #e2401c');
         }

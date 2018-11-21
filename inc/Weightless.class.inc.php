@@ -8,8 +8,9 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 
-class Products_List_Table extends WP_List_Table {
+class Weightless_List_Table extends WP_List_Table {
 
+    public $count;
     /**
      * Initialize the table list.
      */
@@ -28,19 +29,12 @@ class Products_List_Table extends WP_List_Table {
      */
     public function get_columns() {
         return array(
-            'cb'            => '<input type="checkbox" />',
             'id'            => __( 'Product ID', 'fst-shipping-api' ),
             'product'         => __( 'Product', 'fst-shipping-api' ),
             'action'         => __( 'Action', 'fst-shipping-api' ),
         );
     }
 
-    /**
-     * Column cb.
-     */
-    public function column_cb( $product ) {
-        return sprintf( '<input type="checkbox" name="product[]" value="%1$s" />', $product['id'] );
-    }
 
     /**
      * Return ID column
@@ -60,9 +54,18 @@ class Products_List_Table extends WP_List_Table {
     public function column_action( $product ) {
         $edit_url = get_edit_post_link($product['ID']);
         $permalink = get_the_permalink($product['ID']);
-        $links =  sprintf( '<a href="%s">%s</a>', $url, 'Edit' );
+        $links =  sprintf( '<a href="%s">%s</a>', $edit_url, 'Edit' );
         $links .=  sprintf( ' | <a href="%s" target="_blank">%s</a>', $permalink, 'View' );
         return $links;
+    }
+
+    public function get_count() {
+        global $wpdb;
+        $posts_table = $wpdb->prefix."posts";
+        $postmeta_table = $wpdb->prefix."postmeta";
+
+        $count = $wpdb->get_var( "SELECT count(ID) FROM {$posts_table} as A INNER JOIN {$postmeta_table} AS B on A.ID = B.post_id WHERE (B.meta_value = '' OR B.meta_value = 0) AND B.meta_key = '_weight';" );
+        return $count;
     }
 
     /**

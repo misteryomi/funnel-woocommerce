@@ -4,9 +4,9 @@ if ( ! class_exists( 'FST_Shipping_Method' ) ) {
             class FST_Shipping_Method extends WC_Shipping_Method {
                 public function __construct() {
                     $this->id                 = 'fst-shipping-method'; 
-                    $this->method_title = __('Funnel Shipping API Settings', 'fst-shipping-method');
+                    $this->method_title = __('Nipost Shipping API Settings', 'fst-shipping-method');
                     $this->method_description = __('Shipping method settings', 'fst-shipping-method');
-                    $this->title = __('Funnel Weight Based Shipping Cost', 'fst-shipping-method');
+                    $this->title = __('Nipost Shipping Cost', 'fst-shipping-method');
 
                     $this->availablility = 'including';
                     $this->countries = ['NG'];
@@ -31,6 +31,7 @@ if ( ! class_exists( 'FST_Shipping_Method' ) ) {
                  * Define settings field for this shipping method
                  */
                 function init_form_fields() { 
+
                     $this->form_fields = [
                         'enabled' => [
                             'title' => __('Enable', 'fst-shipping-method'),
@@ -47,7 +48,12 @@ if ( ! class_exists( 'FST_Shipping_Method' ) ) {
                         'api_key' => [
                             'title' => __('API key', 'fst-shipping-method'),
                             'type' => 'text',
-                            'desciption' => __('Enter API key', 'fst-shipping-method'),
+                            'description' => __('Enter API key', 'fst-shipping-method'),
+                        ],
+                        'excluded_categories' => [
+                            'title' => __('Exclude Categories', 'fst-shipping-method'),
+                            'type' => 'text',
+                            'description' => __('Select IDs of categories to exclude (separated by comma). <a target="_blank" href="">Click here to know how to get your products\' category IDs</a>', 'fst-shipping-method'),
                         ]
                     ];
  
