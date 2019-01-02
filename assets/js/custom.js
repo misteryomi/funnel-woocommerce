@@ -16,7 +16,7 @@ jQuery(document).ready(function(){
             data.city =  val;
         }
 
-        jQuery('#fst_plugin_data').html("Fetching data...");
+        jQuery('#fst_plugin_data').html("<br/><i class='fa fa-spinner fa-spin'></i> Fetching data...");
         update_checkout();
  
         jQuery.post(ajax_object.ajax_url, data, function(response) {

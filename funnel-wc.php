@@ -3,9 +3,9 @@
 defined('ABSPATH') or die('do not die please');
 /*
 * @wordpress-plugin
-* Plugin Name:       Nipost for Woocommerce
+* Plugin Name:       Funnel for Woocommerce
 * Plugin URI:        Shipping.nipost.gov.ng
-* Description:       Bring the power of the Nipost API to your WooCommerce merchant website and enjoy unlimited logistics possibilities
+* Description:       Bring the power of the Funnel API to your WooCommerce merchant website and enjoy unlimited logistics possibilities
 * Version:           1.0.2
 * Author:            Funnel Logistics Technologies
 * Author URI:        funnel.ng
@@ -146,9 +146,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         
         $fstOrder = [];
         $fstOrder['weight'] = $itemWeight;
-        $fstOrder['from'] = get_option('fst_default_shop_state');
+  //      $fstOrder['from'] = get_option('fst_default_shop_state');
         $fstOrder['to'] = $shipTo;
-        $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
+//        $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
         $fstOrder['areaTo'] = $shipToArea;
         $fstOrder['items'] = serialize($all_weights);
 
@@ -238,9 +238,9 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         
         $fstOrder = [];
         $fstOrder['weight'] = $itemWeight;
-        $fstOrder['from'] = get_option('fst_default_shop_state');
+    //    $fstOrder['from'] = get_option('fst_default_shop_state');
         $fstOrder['to'] = $shipTo;
-        $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
+    //    $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
         $fstOrder['areaTo'] = $shipToArea;
         $fstOrder['items'] = serialize($all_weights);
         
@@ -259,7 +259,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $shipping_methods = WC()->shipping->load_shipping_methods();
         if($shipping_methods['fst-shipping-method']->enabled == "yes")
         {
-                echo "<div class='fst-title'><h4>Select a Shipping Method <abbr class='required' title='required'>*</abbr></h4></div>";
+                echo "<div class='fst-title'><h4>Choose a courier <abbr class='required' title='required'>*</abbr></h4></div>";
                 
                 if(!$_fst_orders['to']){
                     echo 'Please select your <strong>shipping state</strong> to view shipping options';
@@ -271,7 +271,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 
 
                 curl_setopt_array($curl, array(
-                    CURLOPT_URL => API_URL . "/api/v1/shipping/calculate?weight=".$_fst_orders['weight']."&shipFrom=".$_fst_orders['from']."&shipTo=".ucfirst($_fst_orders['to'])."&areaFrom=".$_fst_orders['areaFrom']."&areaTo=".$_fst_orders['areaTo']."&items=".$_fst_orders['items'],
+                    CURLOPT_URL => API_URL . "/api/v1/shipping/calculate?weight=".$_fst_orders['weight']."&shipTo=".urlencode($_fst_orders['to'])."&areaTo=".urlencode($_fst_orders['areaTo'])."&items=".$_fst_orders['items'],
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_ENCODING => "",
                     CURLOPT_MAXREDIRS => 10,
@@ -294,7 +294,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 
                     } else {
                      //   print_r($_fst_orders);
-//						print_r($response);
+					//	print_r($response);
                         $data = json_decode($response,true);	
 				//	print_r($data['requestSessionId']);                        
                         WC()->session->set('requestSessionId', $data['requestSessionId']);
@@ -317,7 +317,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                 
                         echo"<select name='fst_package' data-counter=".$count++." data-id =".$information["Shipper"]["id"]." class='fst_package form-control'>";
                 
-                                echo"<option selected value='' disabled class='packageSelect'>Select a Shipping Class</option>";
+                                echo"<option selected value='' disabled class='packageSelect'>Select a delivery service</option>";
                         
                                 foreach($information["ShippingClasses"] as $ShippingClass ) {
                         
@@ -367,7 +367,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function m_prevent_submission($posted) {
         //Check if selected shipping method is `fst-shipping-method` and if a package is selected
         if ((isset($posted['shipping_method']) && ($posted['shipping_method'][0] == 'fst-shipping-method')) && !isset($_POST['fst_package']) && wc_notice_count( 'error' ) == 0 ) {
-            wc_add_notice( __("Please select a shipping method", 'fst-shipping-api' ), 'error');
+            wc_add_notice( __("Please choose a courier", 'fst-shipping-api' ), 'error');
         }         
         if (empty($_POST['billing_phone'])) {
             wc_add_notice( __("Phone number field is mandatory for shipping", 'fst-shipping-api' ), 'error');
@@ -471,7 +471,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     add_filter('woocommerce_update_options_shipping_fst-shipping-method', 'verify_api_key');
 
     /**
-     * Hide shipping rates when free shipping is available.
+     * Hide shipping rates when fst-shipping-method shipping is available.
      *
      * @param array $rates Array of rates found for the package.
      * @return array
@@ -616,7 +616,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $count = $products->get_count();
 
         if($count > 0) {
-            display_error_notice( "<h3>Nipost Shipping Notice!</h3><strong>Notice: You have <a href='".admin_url('?page=fst-weightcheck')."'>".$count." product(s)</a> with no weight set. A default weight would be used for your shipping calculation instead.</strong>");
+            display_error_notice( "<h3>Funnel Shipping Notice!</h3><strong>Notice: You have <a href='".admin_url('?page=fst-weightcheck')."'>".$count." product(s)</a> with no weight set. A default weight would be used for your shipping calculation instead.</strong>");
         }
     }
     add_action( 'admin_notices', 'fst_display_noweights_error');     
@@ -626,7 +626,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     function weight_errors_display_page(){
         ?>
         <div class="wrap">
-            <h1><?php _e( 'Nipost for Woocommerce: Weight Checker', 'fst-shipping-api' ); ?></h1>
+            <h1><?php _e( 'Funnel for Woocommerce: Weight Checker', 'fst-shipping-api' ); ?></h1>
         <?php
             $_table_list = new Weightless_List_Table();
             $_table_list->prepare_items();

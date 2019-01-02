@@ -6,7 +6,7 @@ if ( ! class_exists( 'FST_Shipping_Method' ) ) {
                     $this->id                 = 'fst-shipping-method'; 
                     $this->method_title = __('Nipost Shipping API Settings', 'fst-shipping-method');
                     $this->method_description = __('Shipping method settings', 'fst-shipping-method');
-                    $this->title = __('Nipost Shipping Cost', 'fst-shipping-method');
+                    $this->title = __('Delivery Cost', 'fst-shipping-method');
 
                     $this->availablility = 'including';
                     $this->countries = ['NG'];
