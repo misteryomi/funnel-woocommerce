@@ -3,7 +3,7 @@
 defined('ABSPATH') or die('do not die please');
 /*
 * @wordpress-plugin
-* Plugin Name:       Funnel for Woocommerce
+* Plugin Name:       Funnel WC
 * Plugin URI:        Shipping.nipost.gov.ng
 * Description:       Bring the power of the Funnel API to your WooCommerce merchant website and enjoy unlimited logistics possibilities
 * Version:           1.0.2
@@ -19,7 +19,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     include 'inc/Weightless.class.inc.php';
 
-    define('API_URL', 'http://shippingapps.test');
+    define('API_URL', 'http://test.funnel.ng');
 
 
     add_action('wp_loaded', 'enqueue_swat_fst');
@@ -140,17 +140,14 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $cartInfo['count'] = $count;
         $cartInfo['totalWeight'] = $itemWeight;
         
-        WC()->session->set('cartItems', serialize($cartInfo));
+        WC()->session->set('cartItems', json_encode($cartInfo));
         
-        // Create array of required values to calculate shipping costs
-        
+        // Create array of required values to calculate shipping costs        
         $fstOrder = [];
         $fstOrder['weight'] = $itemWeight;
-  //      $fstOrder['from'] = get_option('fst_default_shop_state');
         $fstOrder['to'] = $shipTo;
-//        $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
         $fstOrder['areaTo'] = $shipToArea;
-        $fstOrder['items'] = serialize($all_weights);
+        $fstOrder['items'] = json_encode($all_weights);
 
 
         fst_checkout($fstOrder);
@@ -232,7 +229,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $cartInfo['count'] = $count;
         $cartInfo['totalWeight'] = $itemWeight;
         
-        WC()->session->set('cartItems', serialize($cartInfo));
+        WC()->session->set('cartItems', json_encode($cartInfo));
         
         // Create array of required values to calculate shipping costs
         
@@ -242,7 +239,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $fstOrder['to'] = $shipTo;
     //    $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
         $fstOrder['areaTo'] = $shipToArea;
-        $fstOrder['items'] = serialize($all_weights);
+        $fstOrder['items'] = json_encode($all_weights);
         
         fst_checkout($fstOrder);
 
@@ -250,11 +247,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     function fst_checkout($_fst_orders)
     {
-       // return true;
-       $curl = curl_init();       
-       
-       
-//       print_r($_fst_orders);
         
         $shipping_methods = WC()->shipping->load_shipping_methods();
         if($shipping_methods['fst-shipping-method']->enabled == "yes")
@@ -268,35 +260,17 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
                     echo '<p>Please select your <strong>shipping city</strong> to view shipping options</p>';
                 }
                 
+               $url = API_URL . "/api/v1/shipping/calculate?weight=".$_fst_orders['weight']."&shipTo=".urlencode($_fst_orders['to'])."&areaTo=".urlencode($_fst_orders['areaTo'])."&items=".$_fst_orders['items'];
+               $response = fst_http_get($url, get_api_key());
                 
-
-                curl_setopt_array($curl, array(
-                    CURLOPT_URL => API_URL . "/api/v1/shipping/calculate?weight=".$_fst_orders['weight']."&shipTo=".urlencode($_fst_orders['to'])."&areaTo=".urlencode($_fst_orders['areaTo'])."&items=".$_fst_orders['items'],
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_ENCODING => "",
-                    CURLOPT_MAXREDIRS => 10,
-                    CURLOPT_TIMEOUT => 30,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                    CURLOPT_CUSTOMREQUEST => "GET",
-                    CURLOPT_HTTPHEADER => array(
-                        "Auth-Token: ".get_api_key().""
-                    ),
-                ));
-            
-                $response = curl_exec($curl);
-                $err = curl_error($curl);
-            
-                curl_close($curl);
-            
-                    if ($err) {
+                    if (!$response) {
                 
-                        echo "cURL Error #: " . $err;
+                        echo "Error retrieving shipping rates";
                 
                     } else {
-                     //   print_r($_fst_orders);
-					//	print_r($response);
-                        $data = json_decode($response,true);	
-				//	print_r($data['requestSessionId']);                        
+                        $data = wp_remote_retrieve_body( $response );  
+                        $data = json_decode($data,true);	
+
                         WC()->session->set('requestSessionId', $data['requestSessionId']);
                 
                         if($data["data"]) {
@@ -419,7 +393,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     function disable_shipping_calc_on_cart( $show_shipping ) {
 
-        //Yomi, set condition to check if `fst-shipping-method` is empty before it hides here.
+        //NOTICE:: set condition to check if `fst-shipping-method` is empty before it hides here.
         if( is_cart() ) {
             return false;
         }
@@ -428,33 +402,22 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
     add_filter( 'woocommerce_cart_ready_to_calc_shipping', 'disable_shipping_calc_on_cart', 99 );
 
 
+
+    
     function verify_api_key() {
         $api_key = $_REQUEST['woocommerce_fst-shipping-method_api_key'];
-        $curl = curl_init();        
-                
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => API_URL . "/api/v1/shipping/verify",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "GET",
-            CURLOPT_HTTPHEADER => array(
-                "Auth-Token: ".$api_key.""
-            ),
-        ));
 
-        $response = curl_exec($curl);
 
-        $err = curl_error($curl);
-    
-        curl_close($curl);
-    
-        if ($err) {
-            $message = "cURL Error #: " . $err;    
+        $url = API_URL . "/api/v1/shipping/verify";
+        $response = fst_http_get($url, get_api_key());
+
+        
+        if (!$response) {
+            $message = 'Error connecting to host server';    
         } else {
-            $response = json_decode($response);
+            $data = wp_remote_retrieve_body( $response );  
+            $response = json_decode($data,true);	
+            
             update_option('fst_default_shop_state', $response->defaultShop->state);
             update_option('fst_default_shop_area', $response->defaultShop->area);
 
@@ -525,12 +488,12 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
     function woocommerce_order_complete_post_variable(){
         global $woocommerce;
-      
+    
         $cart = WC()->cart;
-      
+    
         $customer = $cart->get_customer();
 
-      //  print_r(WC()->session->get('requestSessionId'));
+    //  print_r(WC()->session->get('requestSessionId'));
 
         $first_name = ($customer->get_billing_first_name() !== '')? $customer->get_billing_first_name(): $_POST['billing_first_name'];
         $last_name = ($customer->get_billing_last_name() !== '')? $customer->get_billing_last_name(): $_POST['billing_last_name'];
@@ -539,58 +502,39 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
         $state = WC()->countries->get_states($customer->get_shipping_country())[$customer->get_shipping_state()];
 
-          $data["sessionId"]= WC()->session->get('requestSessionId');
-          $data["shippingClass"]= $_POST['fst_package'];
-          $data["shippingParther"]= WC()->session->get('Shipper_shipperID');
-          $data["customerEmail"]= ($customer->get_billing_email() !== '')? $customer->get_billing_email() : $_POST['billing_email'];
-          $data["customerName"]= $first_name." ".$last_name;
-          $data["description"]= "transaction";
-          $data["customerAddress"]= $customer->get_billing_address().', '.$customer->get_billing_city().', '.$state;
-          $data["customerPhone"]= ($customer->get_billing_phone() !== '')? $customer->get_billing_phone(): $_POST['billing_phone'];
-          $curl = curl_init();
-
-//          print_r($data);
-//          die();
-
-
-            $cod = '';
-            $cod_price = WC()->cart->subtotal;
-
-            if(WC()->session->get('chosen_payment_method') == 'cod') {
-                $cod = '&cod=1&cod_price='.$cod_price;
-            }
-
-          curl_setopt_array($curl, array(
-            CURLOPT_URL => API_URL . "/api/v1/shipping/submit",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => "sessionId=".$data["sessionId"]."&shippingClass=".$data["shippingClass"]."&shippingParther=".WC()->session->get("Shipper_shipperID")."&customerEmail=".$data["customerEmail"]."&customerName=".$data["customerName"]."&description=".$data["description"]."&customerAddress=".$data["customerAddress"]."&customerPhone=".$data["customerPhone"]."&itemList=".WC()->session->get('cartItems')."".$cod,
-            CURLOPT_HTTPHEADER => array(
-                "Auth-Token: ".get_api_key()."",
-                "Cache-Control: no-cache",
-                "Content-Type: application/x-www-form-urlencoded",
-                "Postman-Token: 168af565-cb4e-4351-958e-51e71a2b9919"
-            ),
-          ));
-          
-          $response = curl_exec($curl);
-          $err = curl_error($curl);
+        $data["sessionId"]= WC()->session->get('requestSessionId');
+        $data["shippingClass"]= $_POST['fst_package'];
+        $data["shippingParther"]= WC()->session->get('Shipper_shipperID');
+        $data["customerEmail"]= ($customer->get_billing_email() !== '')? $customer->get_billing_email() : $_POST['billing_email'];
+        $data["customerName"]= $first_name." ".$last_name;
+        $data["description"]= "transaction";
+        $data["customerAddress"]= $customer->get_billing_address().', '.$customer->get_billing_city().', '.$state;
+        $data["customerPhone"]= ($customer->get_billing_phone() !== '')? $customer->get_billing_phone(): $_POST['billing_phone'];
         
-          curl_close($curl);
-      
-          if ($err) {
-  //          echo "cURL Error #:" . $err;
-          } else {
-          
-//            print_r($response);
-          }
-          
-        
-      }
+        $cod = '';
+        $cod_price = WC()->cart->subtotal;
+
+        $body = array(
+            "sessionId" => $data["sessionId"],
+            "shippingClass" => $data["shippingClass"],
+            "shippingParther" => WC()->session->get("Shipper_shipperID"),
+            "customerEmail" => $data["customerEmail"],
+            "customerName" => $data["customerName"],
+            "description" => $data["description"],
+            "customerAddress" => $data["customerAddress"],
+            "customerPhone" => $data["customerPhone"],
+            "itemList" => WC()->session->get('cartItems')          
+        );
+
+        if(WC()->session->get('chosen_payment_method') == 'cod') {
+            $body['cod'] = 1;
+            $body['cod_price'] = $cod_price;
+        }
+
+        $url = API_URL . '/api/v1/shipping/submit';
+        $response = fst_http_post($url, $body, get_api_key());
+
+   }
       
     add_action('woocommerce_after_checkout_validation','woocommerce_order_complete_post_variable');
 
@@ -636,20 +580,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             $_table_list->views();
             $_table_list->search_box( __( 'Search Key', 'fst-shipping-api' ), 'key' );
             $_table_list->display();
-
-                // $items = fst_check_noweight_products();
-
-                // if(!$items) {
-                //     display_success_notice('Congratulations! All your products\' weights are properly defined.');
-                // } else {
-                //     echo '<p>Please fix the products listed below. Their weights are not defined yet for shipping.</p>';
-                //     echo '<ul>';
-                //     foreach($items as $item) {
-                //         $productDetails = wc_get_product( $item );
-                //         echo '<li>'.$productDetails->name.'</li>';
-                //     }
-                //     echo '</ul>';
-                // }
         ?>
         </div>
         <?php
@@ -659,4 +589,35 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         add_submenu_page(NULL,'Page Title','Page Title', 'manage_options', 'fst-weightcheck', 'weight_errors_display_page');
     }        
     add_action( 'admin_menu', 'fst_add_errorspage_to_menu' );
+
+
+    function fst_http_get($url, $token) {
+        $args = array(
+                     'headers' => array(
+                         'Auth-Token' => $token
+                     )
+                 );
+        $response = wp_remote_get($url, $args);
+
+        return $response;
+    }
+
+    function fst_http_post($url, $body, $token) {
+        $args = array(
+            'body' => $body,
+            'timeout' => '5',
+            'redirection' => '5',
+            'httpversion' => '1.0',
+            'blocking' => true,
+            'headers' => array(
+                            'Auth-Token' => $token,
+                            'Content-Type' => 'application/x-www-form-urlencoded'
+                            ),
+            'cookies' => array()
+        );                 
+        $response = wp_remote_post($url, $args);
+        
+        return $response;
+    }
+
 }

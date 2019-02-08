@@ -4,7 +4,7 @@ if ( ! class_exists( 'FST_Shipping_Method' ) ) {
             class FST_Shipping_Method extends WC_Shipping_Method {
                 public function __construct() {
                     $this->id                 = 'fst-shipping-method'; 
-                    $this->method_title = __('Nipost Shipping API Settings', 'fst-shipping-method');
+                    $this->method_title = __('Funnel Shipping API Settings', 'fst-shipping-method');
                     $this->method_description = __('Shipping method settings', 'fst-shipping-method');
                     $this->title = __('Delivery Cost', 'fst-shipping-method');
 
