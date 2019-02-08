@@ -224,7 +224,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
             }
         } 
         
-//        var_dump($orderItems);
         $cartInfo['items'] = $orderItems;
         $cartInfo['count'] = $count;
         $cartInfo['totalWeight'] = $itemWeight;
@@ -235,9 +234,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         
         $fstOrder = [];
         $fstOrder['weight'] = $itemWeight;
-    //    $fstOrder['from'] = get_option('fst_default_shop_state');
         $fstOrder['to'] = $shipTo;
-    //    $fstOrder['areaFrom'] = get_option('fst_default_shop_area');
         $fstOrder['areaTo'] = $shipToArea;
         $fstOrder['items'] = json_encode($all_weights);
         
@@ -492,8 +489,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
         $cart = WC()->cart;
     
         $customer = $cart->get_customer();
-
-    //  print_r(WC()->session->get('requestSessionId'));
 
         $first_name = ($customer->get_billing_first_name() !== '')? $customer->get_billing_first_name(): $_POST['billing_first_name'];
         $last_name = ($customer->get_billing_last_name() !== '')? $customer->get_billing_last_name(): $_POST['billing_last_name'];
