@@ -1,0 +1,43 @@
+#fst_plugin_data {
+    background: #f8f8f8;
+    padding: 10px 10px 20px;
+}
+#fst_plugin_data .form-group {
+    margin: 5px 0;
+}
+#fst_plugin_data .form-group input[type="text"], #fst_plugin_data .form-group select {
+    padding: 5px;
+}
+#fst_plugin_data .form-group input[type="text"]:disabled, #fst_plugin_data .form-group select:disabled {
+    background: #f8f8f8;
+    color: #7c7c7c;
+}
+#fst_plugin_data .form-group label{
+    font-size: 13px;
+    font-weight: bold;
+}
+#fst_plugin_data .fst-title {
+    border-bottom: 2px solid #fff;
+    margin: 0 -10px 10px;
+    padding: 0 10px;
+}
+#fst_plugin_data .fst-title h4{
+    font-size: 17px;
+    color: #6d6d6d;
+}
+#fst_plugin_data .fst-checkbox-option {
+    font-size: 14px;
+    font-weight: bold;
+}
+.fst-form-div{
+    text-align: center;
+    margin-top:70px;
+    margin-bottom:50px;
+}
+.fst-adm-btn{
+    
+}
+
+.fst_multiselect {
+    min-height: 100px
+}
